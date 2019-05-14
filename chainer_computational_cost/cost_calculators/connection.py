@@ -1,4 +1,3 @@
-import numpy as np
 from chainer_computational_cost.cost_calculators import register
 
 from chainer.functions.connection.convolution_2d \
@@ -118,8 +117,8 @@ def calc_convnd(func, in_data, **kwargs):
                get_conv_outsize(d, k, s, p, cover_all=func.cover_all, d=di)
                for (d, k, s, p, di) in zip(dims, ksize, stride, pad, dilate))
 
-    prod_ksize = np.prod(ksize)
-    prod_outs = np.prod(outs)
+    prod_ksize = reduce(lambda x,y: x*y, ksize)
+    prod_outs = reduce(lambda x,y: x*y, outs)
     if kwargs.get('fma_1flop'):
         flops = in_c * (out_c // g) * prod_ksize * prod_outs
     else:
