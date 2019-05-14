@@ -1,3 +1,5 @@
+from functools import reduce
+
 from chainer_computational_cost.cost_calculators import register
 
 from chainer.functions.connection.convolution_2d \
