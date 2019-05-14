@@ -1,9 +1,12 @@
+import numpy as np
 from chainer_computational_cost.cost_calculators import register
 
 from chainer.functions.connection.convolution_2d \
     import Convolution2DFunction
 from chainer.functions.connection.deconvolution_2d \
     import Deconvolution2DFunction
+from chainer.functions.connection.convolution_nd \
+    ipmort ConvolutionND
 from chainer.functions.connection.linear import LinearFunction
 
 from chainer.utils.conv import get_conv_outsize
@@ -92,6 +95,50 @@ def calc_conv2d(func, in_data, **kwargs):
         's': (sx if sx == sy else (sy, sx)),
         'p': (pw if pw == ph else (ph, pw)),
         'd': (dx if dx == dy else (dy, dx)),
+        'groups': g, 'nobias': b is None
+    }
+    return (flops * batch_size, mread, mwrite, params)
+
+
+@register(ConvolutionND)
+def calc_convnd(func, in_data, **kwargs):
+    x, W = in_data[:2]
+    b = in_data[2] if len(in_data) == 3 else None
+
+    batch_size, in_c = x.shape[:2]
+    dims = x.shape[2:]
+    out_c = W.shape[0]
+    ksize = W.shape[2:]
+    stride = func.stride
+    pad = func.pad
+    dilate = func.dilate
+    g = func.groups if hasattr(func, 'groups') else 1
+
+    outs = tuple(
+               get_conv_outsize(d, k, s, p, cover_all=func.cover_all, d=di)
+               for (d, k, s, p, di) in zip(dims, ksize, stride, pad, dilate))
+
+    prod_ksize = np.prod(ksize)
+    prod_outs = np.prod(outs)
+    if kwargs.get('fma_1flop'):
+        flops = in_c * (out_c // g) * prod_ksize * prod_outs
+    else:
+        if b is not None:
+            flops = 2 * in_c * out_c * prod_ksize * prod_outs // g
+        else:
+            flops = 2 * ((in_c // g) * (out_c // g) - 1) * \
+                prod_ksize * prod_outs * g
+
+    mread = x.size + W.size
+    mwrite = batch_size * out_c * prod_outs
+    if b is not None:
+        mread += b.size
+
+    params = {
+        'k': ksize,
+        's': stride,
+        'p': pad,
+        'd': dilate,
         'groups': g, 'nobias': b is None
     }
     return (flops * batch_size, mread, mwrite, params)
