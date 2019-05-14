@@ -6,7 +6,7 @@ from chainer.functions.connection.convolution_2d \
 from chainer.functions.connection.deconvolution_2d \
     import Deconvolution2DFunction
 from chainer.functions.connection.convolution_nd \
-    ipmort ConvolutionND
+    import ConvolutionND
 from chainer.functions.connection.linear import LinearFunction
 
 from chainer.utils.conv import get_conv_outsize
